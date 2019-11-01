@@ -45,7 +45,7 @@ The following protocol is defined by X1Kit and should be implemented.
 ```swift
 protocol X1KitMouseDelegate : class {
     func connectedStateDidChange(identifier:UUID, isConnected: Bool)
-    func mouseDidMove(identifier:UUID, x: Int8, y: Int8)
+    func mouseDidMove(identifier:UUID, x: Int16, y: Int16)
     func mouseDown(identifier:UUID, button: X1MouseButton)
     func mouseUp(identifier:UUID, button: X1MouseButton)
     func wheelDidScroll(identifier:UUID, z: Int8)
