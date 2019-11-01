@@ -33,7 +33,7 @@ enum X1MouseButton : UInt8 {
 
 protocol X1KitMouseDelegate : class {
     func connectedStateDidChange(identifier:UUID, isConnected: Bool)
-    func mouseDidMove(identifier:UUID, x: Int8, y: Int8)
+    func mouseDidMove(identifier:UUID, x: Int16, y: Int16)
     func mouseDown(identifier:UUID, button: X1MouseButton)
     func mouseUp(identifier:UUID, button: X1MouseButton)
     func wheelDidScroll(identifier:UUID, z: Int8)
@@ -55,7 +55,7 @@ class X1Mouse: NSObject {
         centralManager = CBCentralManager(delegate: self, queue: nil)
     }
 }
-
+x
 extension CBCharacteristic {
     private struct X1KitState {
         static var buttonsState: UInt8 = 0
@@ -199,6 +199,10 @@ extension X1Mouse: CBPeripheralDelegate {
         }
     }
     
+    func extendSign(value: UInt16, n: Int) -> Int16 {
+        return Int16.init(bitPattern: value << (16 - n)) >> (16 - n)
+    }
+    
     func peripheral(_ peripheral: CBPeripheral, didUpdateValueFor characteristic: CBCharacteristic, error: Error?) {
         if (characteristic.uuid==X1Mouse.characteristicReport) {
             for descriptor in characteristic.descriptors!{
@@ -219,7 +223,10 @@ extension X1Mouse: CBPeripheralDelegate {
                                         continue
                                     }
                                     
-                                    delegate?.mouseDidMove(identifier: peripheral.identifier, x: Int8.init(bitPattern:reportData[0]), y: Int8.init(bitPattern:reportData[1]))
+                                    let x:Int16 = extendSign(value:((UInt16(reportData[0])) | ((UInt16(reportData[1]) & 0xF)<<8)), n:12)
+                                    let y:Int16 = extendSign(value:((UInt16(reportData[2]) << 4) | (UInt16(reportData[1])>>4)), n:12)
+                                    
+                                    delegate?.mouseDidMove(identifier: peripheral.identifier, x: x, y: y)
                                 }
                                 break
                                 
@@ -240,7 +247,7 @@ extension X1Mouse: CBPeripheralDelegate {
                                                 }
                                             }
                                         }
-                                        
+                                                                                
                                         characteristic.x1LastButtonsState = UInt8.init(reportData[0])
                                     }
                                         
