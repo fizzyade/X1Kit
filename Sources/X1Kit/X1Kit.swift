@@ -100,29 +100,36 @@ extension X1Mouse: CBCentralManagerDelegate {
                     centralManager.connect(x1)
                 }
                 
+                centralManager.scanForPeripherals(withServices: [X1Mouse.X1Service], options: nil);
+            
             default:
-                break;
+                break
         }
     }
     
-    func centralManager(_ central: CBCentralManager,
-                  didConnect peripheral: CBPeripheral) {
+    func centralManager(_ central: CBCentralManager, didDiscover peripheral: CBPeripheral, advertisementData: [String : Any], rssi RSSI: NSNumber) {
+        if (!x1Array.contains(peripheral)) {
+            x1Array.append(peripheral)
+            
+            peripheral.delegate = self
+            
+            centralManager.connect(peripheral)
+        }
+    }
+    
+    func centralManager(_ central: CBCentralManager, didConnect peripheral: CBPeripheral) {
         delegate?.connectedStateDidChange(identifier: peripheral.identifier, isConnected: true)
         
         peripheral.discoverServices(nil)
     }
     
-    func centralManager(_ central: CBCentralManager,
-     didDisconnectPeripheral peripheral: CBPeripheral,
-                       error: Error?) {
+    func centralManager(_ central: CBCentralManager, didDisconnectPeripheral peripheral: CBPeripheral, error: Error?) {
         delegate?.connectedStateDidChange(identifier: peripheral.identifier, isConnected: false)
         
         centralManager.connect(peripheral)
     }
     
-    func centralManager(_ central: CBCentralManager,
-            didFailToConnect peripheral: CBPeripheral,
-                       error: Error?) {
+    func centralManager(_ central: CBCentralManager, didFailToConnect peripheral: CBPeripheral, error: Error?) {
         centralManager.connect(peripheral);
     }
 }
@@ -138,14 +145,13 @@ extension X1Mouse: CBPeripheralDelegate {
         }
     }
     
-    func peripheral(_ peripheral: CBPeripheral, didDiscoverCharacteristicsFor service: CBService,
-                    error: Error?) {
+    func peripheral(_ peripheral: CBPeripheral, didDiscoverCharacteristicsFor service: CBService, error: Error?) {
         guard let characteristics = service.characteristics else { return }
         
         for characteristic in characteristics {
             switch(characteristic.uuid) {
                 case X1Mouse.characteristicProtocolMode:
-                    /* select boot mode protocol */
+                    /* select boot mode protocol, allows direct access to mouse */
                     peripheral.writeValue(Data(bytes:[0], count:1), for: characteristic, type: CBCharacteristicWriteType.withoutResponse)
 
                 case X1Mouse.characteristicReport:
@@ -158,16 +164,22 @@ extension X1Mouse: CBPeripheralDelegate {
     }
     
     func peripheral(_ peripheral: CBPeripheral, didDiscoverDescriptorsFor characteristic: CBCharacteristic, error: Error?) {
-        if ((characteristic.descriptors) != nil) {
-            for descriptor in characteristic.descriptors!{
-                peripheral.readValue(for: descriptor);
-            }
+        guard let descriptors = characteristic.descriptors else { return }
+        
+        for descriptor in descriptors {
+            peripheral.readValue(for: descriptor);
         }
     }
     
     func peripheral(_ peripheral: CBPeripheral, didUpdateValueFor descriptor: CBDescriptor, error: Error?) {
         if (descriptor.uuid==X1Mouse.descriptorReportReference) {
             if let value = descriptor.value as? NSData {
+                /* report reference is 2 bytes long */
+                
+                if value.count != 2 {
+                    return
+                }
+                
                 let reportId = (UInt16(value[0])<<8) | (UInt16(value[1]))
                 
                 switch(reportId) {
@@ -187,27 +199,40 @@ extension X1Mouse: CBPeripheralDelegate {
         }
     }
     
-    func peripheral(_ peripheral: CBPeripheral, didUpdateValueFor characteristic: CBCharacteristic,
-    error: Error?) {
+    func peripheral(_ peripheral: CBPeripheral, didUpdateValueFor characteristic: CBCharacteristic, error: Error?) {
         if (characteristic.uuid==X1Mouse.characteristicReport) {
             for descriptor in characteristic.descriptors!{
                 if (descriptor.uuid==X1Mouse.descriptorReportReference) {
                     if let value = descriptor.value as? NSData {
+                        /* check report contains 3 bytes, both xy & buttons reports are 3 bytes long */
+                        
+                        if (value.count != 2) {
+                            continue
+                        }
+                        
                         let reportId = (UInt16(value[0])<<8) | (UInt16(value[1]))
                         
                         switch(reportId) {
                             case X1Mouse.xyReport:
-                                if let xyValue = characteristic.value as NSData? {
-                                    delegate?.mouseDidMove(identifier: peripheral.identifier, x: Int8.init(bitPattern:xyValue[0]), y: Int8.init(bitPattern:xyValue[1]))
+                                if let reportData = characteristic.value as NSData? {
+                                    if (reportData.count != 3) {
+                                        continue
+                                    }
+                                    
+                                    delegate?.mouseDidMove(identifier: peripheral.identifier, x: Int8.init(bitPattern:reportData[0]), y: Int8.init(bitPattern:reportData[1]))
                                 }
                                 break
                                 
                             case X1Mouse.wheelAndButtonsReport:
-                                if let buttonsValue = characteristic.value as NSData? {
-                                    if (characteristic.x1LastButtonsState != UInt8.init(buttonsValue[0])) {
+                                if let reportData = characteristic.value as NSData? {
+                                    if (reportData.count != 3) {
+                                        continue
+                                    }
+                                    
+                                    if (characteristic.x1LastButtonsState != UInt8.init(reportData[0])) {
                                         for bit:UInt8 in 0...2 {
-                                            if ( ((buttonsValue[0]) & (1<<bit)) != ((characteristic.x1LastButtonsState & (1<<bit))) ) {
-                                                if (((buttonsValue[0]) & (1<<bit))==(1<<bit)) {
+                                            if ( ((reportData[0]) & (1<<bit)) != ((characteristic.x1LastButtonsState & (1<<bit))) ) {
+                                                if (((reportData[0]) & (1<<bit))==(1<<bit)) {
                                                     delegate?.mouseDown(identifier: peripheral.identifier, button: X1MouseButton(rawValue: bit)!)
                                                 }
                                                 else {
@@ -216,11 +241,11 @@ extension X1Mouse: CBPeripheralDelegate {
                                             }
                                         }
                                         
-                                        characteristic.x1LastButtonsState = UInt8.init(buttonsValue[0])
+                                        characteristic.x1LastButtonsState = UInt8.init(reportData[0])
                                     }
                                         
-                                    if (Int8.init(bitPattern: buttonsValue[1]) != 0) {
-                                        delegate?.wheelDidScroll(identifier: peripheral.identifier, z: Int8.init(bitPattern: buttonsValue[1]))
+                                    if (Int8.init(bitPattern: reportData[1]) != 0) {
+                                        delegate?.wheelDidScroll(identifier: peripheral.identifier, z: Int8.init(bitPattern: reportData[1]))
                                     }
                                 }
                                 break
