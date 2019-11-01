@@ -55,7 +55,7 @@ class X1Mouse: NSObject {
         centralManager = CBCentralManager(delegate: self, queue: nil)
     }
 }
-x
+
 extension CBCharacteristic {
     private struct X1KitState {
         static var buttonsState: UInt8 = 0
