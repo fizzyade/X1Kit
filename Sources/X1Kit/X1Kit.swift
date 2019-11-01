@@ -25,56 +25,82 @@
 
 import CoreBluetooth
 
-class X1Kit : NSObject {
+protocol X1KitMouseDelegate {
+    func connectedStateDidChange(isConnected: Bool)
+    func mouseDidMove(x: Int, y: Int)
+    func buttonsDidChange(state: Int)
+    func wheelDidScroll(z: Int)
+}
+
+class X1Mouse: NSObject {
     var centralManager: CBCentralManager!
-    var X1Peripheral: CBPeripheral!
-    let X1Service = CBUUID(string: "2B080000-BDB5-F6EB-24AE-9D6AB282AB63")
-    let characteristicProtocolMode = CBUUID(string: "2A4E");
-    let characteristicReport = CBUUID(string: "2A4D");
-    let descriptorReportReference = CBUUID(string: "2908");
-    let wheelAndButtonsReport: UInt16 = 0x0101;
-    let xyReport: UInt16 = 0x0201;
+    weak var delegate: X1KitMouseDelegate?
+    
+    static let X1Service = CBUUID(string: "2B080000-BDB5-F6EB-24AE-9D6AB282AB63")
+    static let characteristicProtocolMode = CBUUID(string: "2A4E");
+    static let characteristicReport = CBUUID(string: "2A4D");
+    static let descriptorReportReference = CBUUID(string: "2908");
+    static let wheelAndButtonsReport: UInt16 = 0x0101;
+    static let xyReport: UInt16 = 0x0201;
     
     func start() {
         centralManager = CBCentralManager(delegate: self, queue: nil)
     }
 }
 
-extension X1Kit: CBCentralManagerDelegate {
+extension X1Mouse: CBCentralManagerDelegate {
     func centralManagerDidUpdateState(_ central: CBCentralManager) {
         switch central.state {
-        case .unknown:
-            print("central.state is .unknown")
-        case .resetting:
-            print("central.state is .resetting")
-        case .unsupported:
-            print("central.state is .unsupported")
-        case .unauthorized:
-            print("central.state is .unauthorized")
-        case .poweredOff:
-            print("central.state is .poweredOff")
-        case .poweredOn:
-            print("central.state is .poweredOn")
-            
-            let deviceList = centralManager.retrieveConnectedPeripherals(withServices: [X1Service])
-            
-            for device in deviceList {
-                X1Peripheral = device
-                X1Peripheral.delegate = self
+            case .unknown:
+                break
+                
+            case .resetting:
+                break
+                
+            case .unsupported:
+                break
+                
+            case .unauthorized:
+                break
+                
+            case .poweredOff:
+                break
+                
+            case .poweredOn:
+                let peripheralList = centralManager.retrieveConnectedPeripherals(withServices: [X1Service])
+                
+                for peripheral in peripheralLost {
+                    peripheral.delegate = self
 
-                centralManager.connect(X1Peripheral)
-            }
-        default:
-            break;
+                    centralManager.connect(peripheral)
+                }
+                
+            default:
+                break;
         }
     }
     
-    func centralManager(_ central: CBCentralManager, didConnect peripheral: CBPeripheral) {
-        X1Peripheral.discoverServices(nil)
+    func centralManager(_ central: CBCentralManager, 
+                  didConnect peripheral: CBPeripheral) {
+        delegate?.connectedStateDidChange(isConnected: true)
+    }
+    
+    func centralManager(_ central: CBCentralManager, 
+     didDisconnectPeripheral peripheral: CBPeripheral, 
+                       error: Error?) {
+        delegate?.connectedStateDidChange(isConnected: false)
+        
+        centralManager.connect(peripheral)
+    }
+    
+    func centralManager(_ central: CBCentralManager, 
+            didFailToConnect peripheral: CBPeripheral, 
+                       error: Error?) {
+        centralManager.connect(peripheral);
     }
 }
 
-extension X1Kit: CBPeripheralDelegate {
+extension X1Mouse: CBPeripheralDelegate {
     func peripheral(_ peripheral: CBPeripheral, didDiscoverServices error: Error?) {
         guard let services = peripheral.services else { return }
         
@@ -115,8 +141,9 @@ extension X1Kit: CBPeripheralDelegate {
     func peripheral(_ peripheral: CBPeripheral, didUpdateValueFor descriptor: CBDescriptor, error: Error?) {
         if (descriptor.uuid==descriptorReportReference) {
             if let value = descriptor.value as? NSData {
-                switch((UInt16(value[0])<<8) | (UInt16(value[1]))) {
-
+                let reportId = (UInt16(value[0])<<8) | (UInt16(value[1]))
+                
+                switch(reportId) {
                     case xyReport, wheelAndButtonsReport:
                         peripheral.setNotifyValue(true, for: descriptor.characteristic)
                         
@@ -124,10 +151,10 @@ extension X1Kit: CBPeripheralDelegate {
                             peripheral.setNotifyValue(true, for: descriptor.characteristic)
                         }
 
-                        break;
+                        break
                     
                     default:
-                        break;
+                        break
                 }
             }
         }
@@ -136,7 +163,24 @@ extension X1Kit: CBPeripheralDelegate {
     func peripheral(_ peripheral: CBPeripheral, didUpdateValueFor characteristic: CBCharacteristic,
     error: Error?) {
         if (characteristic.uuid==characteristicReport) {
-            //print(characteristic.descriptors)
+            for descriptor in characteristic.descriptors!{
+                if (descriptor?.uuid==descriptorReportReference) {
+                    if let value = descriptor.value as? NSData {
+                        let reportId = (UInt16(value[0])<<8) | (UInt16(value[1]))
+                        
+                        switch(reportId) {
+                            case xyReport:
+                                delegate?.mouseDidMove(x: 0, y: 0)
+                                break
+                                
+                            case wheelAndButtonsReport:
+                                delegate?.buttonsDidChange(state: 0)
+                                delegate?.wheelDidScroll(z: 0)
+                                break
+                        }
+                    }
+                }
+            }
         }
     }
 }
