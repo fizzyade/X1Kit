@@ -1,12 +1,14 @@
 # X1Kit
 
-X1Kit is a Swift framework that allows applications to make use of the Citrix X1 mouse.
+X1Kit is a Swift framework that allows applications to make direct use of the Citrix X1 mouse.
+
+## Purpose
+
+The X1  provides a Bluetooth Low Energy (BLE) protocol to report position and buttn states, it is capable of operating as a standard BLE mouse or additionally a mode which allows iOS applications to directly access the mouse without any operating system support, this library allows applications to take advantage of this feature.
 
 ## Requirements
 
-A Citrix X1 mouse, this is a mouse which provides a Bluetooth Low Energy protocol to report position and button states, it is capable of operating as a standard BLE mouse or in a an additional mode which allows iOS applications to directly access the mouse without any operating system support,
-
-You should ensure that the mouse is correctly paired with the iOS device,
+* A Citrix X1 mouse, the mouse should be paired with iOS.
 
 ## Usage
 
@@ -26,12 +28,11 @@ NSBluetoothAlwaysUsageDescription
 
 iOS 12 or earlier:
 
-
 ```swift
 NSBluetoothPeripheralUsageDescription
 ```
 
-The application should instantiate and instance of the X1Mouse class and the delegate set to receive updates from the mouse,
+The application should instantiate an  instance of the X1Mouse class and set the objects delegate to an object that implements the X1KitMouseDelegate protocol.
 
 ```swift
 let theMouse = X1Mouse()
@@ -39,13 +40,13 @@ let theMouse = X1Mouse()
 theMouse.delegate = self
 ```
 
-The following protocol is defined and should be implemented.
+The following protocol is defined by X1Kit and should be implemented.
 
 ```swift
 protocol X1KitMouseDelegate {
-    func connectedStateDidChange(isConnected: bool)
+    func connectedStateDidChange(isConnected: Bool)
     func mouseDidMove(x: Int, y: Int)
-    func buttonsDidChange(buttons: Int)
+    func buttonsDidChange(state: Int)
     func wheelDidScroll(z: Int)
 }
 ```
