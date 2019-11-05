@@ -1,4 +1,4 @@
-![Logo](https://github.com/fizzyade/X1Kit/assets/icon_76pt.png?raw=true)
+![Logo](../assets/icon_76pt.png?raw=true)
 
 [![Language: Swift 5](https://img.shields.io/badge/language-swift%205-f48041.svg?style=flat)](https://developer.apple.com/swift)
 [![License: MIT](http://img.shields.io/badge/license-MIT-lightgrey.svg?style=flat)](https://github.com/fizzyade/X1Kit/blob/master/LICENSE)
