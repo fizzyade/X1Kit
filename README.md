@@ -1,3 +1,5 @@
+![Logo](../assets/icon_76pt.png?raw=true)
+
 # X1Kit
 
 X1Kit is a Swift framework that allows applications to make direct use of the Citrix X1 mouse.
