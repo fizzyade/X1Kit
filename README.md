@@ -1,4 +1,7 @@
-![Logo](../assets/icon_76pt.png?raw=true)
+![Logo](https://github.com/fizzyade/X1Kit/assets/icon_76pt.png?raw=true)
+
+[![Language: Swift 5](https://img.shields.io/badge/language-swift%205-f48041.svg?style=flat)](https://developer.apple.com/swift)
+[![License: MIT](http://img.shields.io/badge/license-MIT-lightgrey.svg?style=flat)](https://github.com/fizzyade/X1Kit/blob/master/LICENSE)
 
 # X1Kit
 
@@ -45,12 +48,12 @@ theMouse.delegate = self
 The following protocol is defined by X1Kit and should be implemented.
 
 ```swift
-protocol X1KitMouseDelegate : class {
-    func connectedStateDidChange(identifier:UUID, isConnected: Bool)
-    func mouseDidMove(identifier:UUID, x: Int16, y: Int16)
-    func mouseDown(identifier:UUID, button: X1MouseButton)
-    func mouseUp(identifier:UUID, button: X1MouseButton)
-    func wheelDidScroll(identifier:UUID, z: Int8)
+protocol X1KitMouseDelegate: class {
+    func connectedStateDidChange(identifier: UUID, isConnected: Bool)
+    func mouseDidMove(identifier: UUID, deltaX: Int16, deltaY: Int16)
+    func mouseDown(identifier: UUID, button: X1MouseButton)
+    func mouseUp(identifier: UUID, button: X1MouseButton)
+    func wheelDidScroll(identifier: UUID, deltaZ: Int8)
 }
 ```
 
