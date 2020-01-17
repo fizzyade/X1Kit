@@ -26,13 +26,13 @@
 
 import CoreBluetooth
 
-enum X1MouseButton: UInt8 {
+@objc enum X1MouseButton: UInt8 {
     case left = 0
     case right = 1
     case middle = 2
 }
 
-protocol X1KitMouseDelegate: class {
+@objc protocol X1KitMouseDelegate: class {
     func connectedStateDidChange(identifier: UUID, isConnected: Bool)
     func mouseDidMove(identifier: UUID, deltaX: Int16, deltaY: Int16)
     func mouseDown(identifier: UUID, button: X1MouseButton)
@@ -43,7 +43,7 @@ protocol X1KitMouseDelegate: class {
 class X1Mouse: NSObject {
     var centralManager: CBCentralManager?
     var x1Array: [CBPeripheral] = []
-    weak var delegate: X1KitMouseDelegate?
+    @objc weak var delegate: X1KitMouseDelegate?
 
     static let X1Service = CBUUID(string: "2B080000-BDB5-F6EB-24AE-9D6AB282AB63")
     static let characteristicProtocolMode = CBUUID(string: "2A4E")
@@ -52,7 +52,7 @@ class X1Mouse: NSObject {
     static let wheelAndButtonsReport: UInt16 = 0x0101
     static let xyReport: UInt16 = 0x0201
 
-    func start() {
+    @objc func start() {
         centralManager = CBCentralManager(delegate: self, queue: nil)
     }
 }
