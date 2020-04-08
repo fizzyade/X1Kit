@@ -219,7 +219,19 @@ extension X1Mouse: CBPeripheralDelegate {
 
             case X1Mouse.wheelAndButtonsReport:
                 guard let reportData = characteristic.value as NSData? else { continue }
-                guard reportData.count == 3 else { continue }
+
+                if (reportData.count != 3) && (reportData.count != 6) {
+                    continue
+                }
+
+                // newer mice/firmware send xy deltas in this report
+
+                if reportData.count == 6 {
+                    let deltaX: Int16 = extendSign(value: ((UInt16(reportData[0])) | ((UInt16(reportData[1]) & 0xF) << 8)), totalBits: 12)
+                    let deltaY: Int16 = extendSign(value: ((UInt16(reportData[2]) << 4) | (UInt16(reportData[1]) >> 4)), totalBits: 12)
+
+                    delegate?.mouseDidMove(identifier: peripheral.identifier, deltaX: deltaX, deltaY: deltaY)
+                }
 
                 // check to see if any bits in the button state have changed
 
@@ -241,8 +253,8 @@ extension X1Mouse: CBPeripheralDelegate {
 
                 // check whether wheel moved
 
-                if Int8.init(bitPattern: reportData[1]) != 0 {
-                    delegate?.wheelDidScroll(identifier: peripheral.identifier, deltaZ: Int8.init(bitPattern: reportData[1]))
+                if Int8.init(bitPattern: reportData[reportData.count-2]) != 0 {
+                    delegate?.wheelDidScroll(identifier: peripheral.identifier, deltaZ: Int8.init(bitPattern: reportData[reportData.count-2]))
                 }
 
             default:
