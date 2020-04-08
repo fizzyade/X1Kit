@@ -217,20 +217,24 @@ extension X1Mouse: CBPeripheralDelegate {
 
                 delegate?.mouseDidMove(identifier: peripheral.identifier, deltaX: deltaX, deltaY: deltaY)
 
-            case X1Mouse.wheelAndButtonsReport:
+             case X1Mouse.wheelAndButtonsReport:
                 guard let reportData = characteristic.value as NSData? else { continue }
 
-                if (reportData.count != 3) && (reportData.count != 6) {
+                var wheelByte = reportData.count - 2
+
+                if (reportData.count != 3) && (reportData.count != 5) {
                     continue
                 }
 
                 // newer mice/firmware send xy deltas in this report
 
-                if reportData.count == 6 {
-                    let deltaX: Int16 = extendSign(value: ((UInt16(reportData[0])) | ((UInt16(reportData[1]) & 0xF) << 8)), totalBits: 12)
-                    let deltaY: Int16 = extendSign(value: ((UInt16(reportData[2]) << 4) | (UInt16(reportData[1]) >> 4)), totalBits: 12)
+                if reportData.count == 5 {
+                    let deltaX: Int16 = extendSign(value: ((UInt16(reportData[1])) | ((UInt16(reportData[2]) & 0xF) << 8)), totalBits: 12)
+                    let deltaY: Int16 = extendSign(value: ((UInt16(reportData[3]) << 4) | (UInt16(reportData[2]) >> 4)), totalBits: 12)
 
                     delegate?.mouseDidMove(identifier: peripheral.identifier, deltaX: deltaX, deltaY: deltaY)
+
+                    wheelByte = reportData.count - 1
                 }
 
                 // check to see if any bits in the button state have changed
@@ -253,8 +257,8 @@ extension X1Mouse: CBPeripheralDelegate {
 
                 // check whether wheel moved
 
-                if Int8.init(bitPattern: reportData[reportData.count-2]) != 0 {
-                    delegate?.wheelDidScroll(identifier: peripheral.identifier, deltaZ: Int8.init(bitPattern: reportData[reportData.count-2]))
+                if Int8.init(bitPattern: reportData[wheelByte]) != 0 {
+                    delegate?.wheelDidScroll(identifier: peripheral.identifier, deltaZ: Int8.init(bitPattern: reportData[wheelByte]))
                 }
 
             default:
