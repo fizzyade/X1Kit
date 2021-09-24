@@ -32,7 +32,7 @@ import CoreBluetooth
     case middle = 2
 }
 
-@objc protocol X1KitMouseDelegate: class {
+@objc protocol X1KitMouseDelegate: AnyObject {
     func connectedStateDidChange(identifier: UUID, isConnected: Bool)
     func mouseDidMove(identifier: UUID, deltaX: Int16, deltaY: Int16)
     func mouseDown(identifier: UUID, button: X1MouseButton)
