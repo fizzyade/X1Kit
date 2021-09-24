@@ -32,7 +32,7 @@ import CoreBluetooth
     case middle = 2
 }
 
-@objc protocol X1KitMouseDelegate: class {
+@objc protocol X1KitMouseDelegate: AnyObject {
     func connectedStateDidChange(identifier: UUID, isConnected: Bool)
     func mouseDidMove(identifier: UUID, deltaX: Int16, deltaY: Int16)
     func mouseDown(identifier: UUID, button: X1MouseButton)
@@ -160,6 +160,11 @@ extension X1Mouse: CBPeripheralDelegate {
     }
 
     func peripheral(_ peripheral: CBPeripheral, didUpdateValueFor descriptor: CBDescriptor, error: Error?) {
+        #if swift(>=5.5)
+        guard let characteristic = descriptor.characteristic else { return }
+        #else
+        let characteristic = descriptor.characteristic
+        #endif
         guard descriptor.uuid == X1Mouse.descriptorReportReference else { return }
         guard let value = descriptor.value as? NSData else { return }
         guard value.count == 2 else { return } /* report reference is 2 bytes long */
@@ -169,10 +174,10 @@ extension X1Mouse: CBPeripheralDelegate {
         switch reportId {
         case X1Mouse.xyReport,
              X1Mouse.wheelAndButtonsReport:
-            peripheral.setNotifyValue(true, for: descriptor.characteristic)
+            peripheral.setNotifyValue(true, for: characteristic)
 
-            if descriptor.characteristic.properties.contains(.notify) {
-                peripheral.setNotifyValue(true, for: descriptor.characteristic)
+            if characteristic.properties.contains(.notify) {
+                peripheral.setNotifyValue(true, for: characteristic)
             }
 
         default:
